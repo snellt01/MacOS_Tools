@@ -1,7 +1,6 @@
 #<------HOW TO USE------>
 #1. Open Terminal
-#2. Type "bash" Drag & drop "GetAppDetails.sh" into Terminal. Hit Enter 
-  #should look like: bash /user/desktop/GetAppDetails.sh
+#2. Type "bash" Drag & drop "MacOS_Tools.sh" into Terminal. Hit Enter 
 
 #This shell script queries the plist of MacOS Applications and Pro Tools .aax plugins, outputting the name, version, developer and native arm compatability to a .csv file
 
@@ -24,48 +23,63 @@ InventoryCSV=/"${Inventory}"/"Macs-At-A-Glance.csv"
 
 #------------------------Hostname Configuration Function------------------------#
 function set_hostname() {
-echo "Type hostname"
-read user_input
-hostname $user_input
+read -p "Set hostname? (y/N)" confirm
+if [ "$confirm" = "y" ]; then 
+  read -p "Type hostname" host_name
+  hostname $host_name
+fi
 }
 
 #------------------------Network Configuration Function------------------------#
-function set_network_config() {
+function check_network_csv() {
 
   configdocument=""$(dirname "${BASH_SOURCE[0]}")"/ipconfig.csv"
   hostname=$(hostname)
 
+  # Extracting parameters from CSV based on hostname
+  function set_network_config() {
     # Extracting parameters from CSV based on hostname
-    set_network_config() {
-        # Extracting parameters from CSV based on hostname
-        interfacename=$(awk -F',' -v host="$hostname" '$1 == host {print $2}' $configdocument)
-        ip_address=$(awk -F',' -v host="$hostname" '$1 == host {print $3}' $configdocument)
-        subnet=$(awk -F',' -v host="$hostname" '$1 == host {print $4}' $configdocument)
-        gateway=$(awk -F',' -v host="$hostname" '$1 == host {print $5}' $configdocument)
-        dns1=$(awk -F',' -v host="$hostname" '$1 == host {print $6}' $configdocument)
-        dns2=$(awk -F',' -v host="$hostname" '$1 == host {print $7}' $configdocument)
-        ntp=$(awk -F',' -v host="$hostname" '$1 == host {print $8}' $configdocument)
+    interfacename=$(awk -F',' -v host="$hostname" '$1 == host {print $2}' $configdocument)
+    ip_address=$(awk -F',' -v host="$hostname" '$1 == host {print $3}' $configdocument)
+    subnet=$(awk -F',' -v host="$hostname" '$1 == host {print $4}' $configdocument)
+    gateway=$(awk -F',' -v host="$hostname" '$1 == host {print $5}' $configdocument)
+    dns1=$(awk -F',' -v host="$hostname" '$1 == host {print $6}' $configdocument)
+    dns2=$(awk -F',' -v host="$hostname" '$1 == host {print $7}' $configdocument)
+    ntp=$(awk -F',' -v host="$hostname" '$1 == host {print $8}' $configdocument)
+    jumbo=$(awk -F',' -v host="$hostname" '$1 == host {print $9}' $configdocument)
 
-        # Set network configuration
-        networksetup -setmanual $interfacename $ip_address $subnet $gateway >/dev/null 2>&1
-        networksetup -setdnsservers $interfacename $dns1 $dns2 >/dev/null 2>&1
-        #write if statement to check if value is set in csv, if so run the following
-        if [ -f $ntp ]; then
-          sudo systemsetup -setusingnetworktime on >/dev/null 2>&1
-          sudo systemsetup -setnetworktimeserver $ntp >/dev/null 2>&1
-        else
-          echo "NTP not set"
-        fi 
-        echo "Network configuration set successfully."
-    }
+    # Set network configuration
+    networksetup -setmanual $interfacename $ip_address $subnet $gateway >/dev/null 2>&1
+    networksetup -setdnsservers $interfacename $dns1 $dns2 >/dev/null 2>&1
+    sudo networksetup -setmtu $interfacename $mtu >/dev/null 2>&1
+    #Check if value is set in csv, set NTP server
+    if [ -n "$ntp" ]; then
+      sudo systemsetup -setusingnetworktime on >/dev/null 2>&1
+      sudo systemsetup -setnetworktimeserver $ntp >/dev/null 2>&1
+    else
+      echo "NTP not set"
+    fi 
+
+    #check if MTU value exists in csv file, if so set it
+    if [ "$jumbo" = Y ]; then
+      sudo networksetup -setmtu $interfacename 9000 >/dev/null 2>&1
+      echo "MTU set to 9000"
+    elif [ "$jumbo" = N ]; then
+      sudo networksetup -setmtu $interfacename 1500 >/dev/null 2>&1
+      echo "MTU set to 1500"
+    else
+      echo "MTU not defined, skipped"
+    fi     
+  }
 
     # Check if CSV file exists
     if [ ! -f "$configdocument" ]; then
-        echo "ERROR: CSV file $csv_file not found."
-        echo "Hostname, Interface Name, IP Address, Subnet, Gateway, DNS 1, DNS 2, NTP" > $configdocument
-        chmod 777 $configdocument
-        echo "Template Config Document Generated"
-        echo "Please complete config document and run again"
+      echo "ERROR: CSV file $csv_file not found."
+      echo "Hostname, Interface Name, IP Address, Subnet, Gateway, DNS 1, DNS 2, NTP, Jumbo Frames (Y/N/Blank)" > $configdocument
+      echo "example-host, Terminal command to get network names: networksetup -listallnetworkservices, 10.0.1.100, 255.255.255.0, 10.0.1.1, 1.1.1.1, 8.8.8.8, uk.pool.ntp.org, Y=9000 N=1500 Blank=no change" >> $configdocument
+      chmod 777 $configdocument
+      echo "Template Config Document Generated"
+      echo "Please complete config document and run again"
     else
         # Check if hostname exists in the CSV file
         if ! grep -q "^$hostname," "$configdocument"; then
@@ -74,9 +88,8 @@ function set_network_config() {
           set_network_config
         fi
     fi
-    # Set network configuration
-    #
 }
+
 
 #------------------------Power Configuration Function------------------------#
 function optimise_power_settings() {
@@ -124,8 +137,6 @@ function MacOS_Inventory (){
   # Print header to CSV file
   if [ ! -e "$InventoryCSV" ]; then
       echo "Model, Hostname, Serial #, CPU, RAM, OS Version, Interface, Mac Address, IPv4 Address, Subnet Mask, Default Gateway" > "${Inventory}"/Macs-At-A-Glance.csv
-  else
-      echo "Output file $output_csv already exists. Skipping header creation."
   fi
 
   macos_version=$(sw_vers -productVersion)
@@ -184,7 +195,7 @@ function MacOS_Inventory (){
       fi
   done
 
-  echo "Mac Details written to "${Inventory}"/Macs-At-A-Glance.csv"
+  #echo "Mac Details written to "${Inventory}"/Macs-At-A-Glance.csv"
   }
 
 
@@ -313,21 +324,32 @@ function MacOS_Inventory (){
       exit
       ;;
   esac
-
+  chmod -R 777 "$Inventory"
   printf "\n----Scan Complete - Output folder location----\n" 
   printf "\n${CSV_DIR}\n\n\n\n"
 }
 #----------------------------------------------MacOS Inventory Code End----------------------------------------------#
 
+#run all function 
+function run_all() { 
+  set_hostname 
+  check_network_csv
+  optimise_power_settings
+  enable_screen_sharing
+  avid_optimise
+  ui_tweaks
+  MacOS_Inventory
+}
 
 #------------------------Main Menu------------------------#
 printf "\n%.0s" {1..20}
 
 echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
 echo "*                                                         *"
-echo "*        MacOS Configure & Inventory - Version 2.2        *"
+echo "*               MacOS Tools - Version 2.3                 *"
 echo "*                                                         *"
 echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+echo "Current Hostname: $hostname"
 #echo "*                                                         *"
 #echo "*                   What does this do?                    *"
 #echo "*                                                         *"
@@ -340,30 +362,27 @@ echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
 
 while true; do
   printf "\n%.0s" {1..3}
-  echo "Current Hostname: $hostname"
   echo "Main Menu:"
+  echo "A. Run all"
   echo "1. Set Hostname"
   echo "2. Configure Network from CSV"
   echo "3. Optimise Power Settings"
   echo "4. Enable Screen Sharing"
   echo "5. AVID Optimisations"
   echo "6. UI Tweaks"
-  echo "10. Create System Inventory"
-  echo "W. Waltham College Config"
+  echo "I. Create System Inventory"
   echo "Q. Quit"
   read choice
 
   case $choice in
     1) set_hostname ;;
-    2) set_network_config ;;
+    2) check_network_csv ;;
     3) optimise_power_settings ;;
     4) enable_screen_sharing ;;
-    5) avid_optimisations;;
+    5) avid_optimise;;
     6) ui_tweaks;;
-    W) set_network_config
-       MacOS_Inventory
-       ;; 
-    10) MacOS_Inventory ;;   
+    I|i) MacOS_Inventory ;;
+    A|a) run_all ;; 
     Q|q) break  
       ;;
     *)
