@@ -100,6 +100,36 @@ done
 #echo "Mac Details written to "${Inventory}"/Macs-At-A-Glance.csv"
 }
 
+#------------------------AU Scan Function------------------------#
+function au_scan(){
+  printf "Plugin,Version,Developer,Native Arm,64-bit\n" | tr -d '"'>"${CSV_DIR}"/au_plugins.csv
+  sleep 2
+  au_csv="${CSV_DIR}/au_plugins.csv"
+  AU_DIR='/Library/Audio/Plug-Ins/Components'
+  cd "$AU_DIR"
+
+  for file in $(find "$AU_DIR" -iname "Contents" -prune); do
+    name="${file%.*}"
+    version=`plutil -p "/$file/Info.plist" | grep CFBundleShortVersionString | tr -d ","` 
+    developer=`plutil -p "/$file/Info.plist" | grep CFBundleIdentifier | cut -f2 -d "."`
+    #binary=`file "/$file/MacOS/${file//.aaaxplugin}"`
+    binary=`file "/$file/MacOS"/*`
+    if [[ $binary == *"arm64"* ]]; then
+      arm="yes"
+    else
+      arm="no"
+    fi
+    if [[ $binary == *"64-bit"* ]]; then
+      bit="64-bit"
+    elif [[ $binary == *"32-bit"* ]]; then
+      bit="32-bit"
+    else
+      bit="unknown"
+    fi
+    printf "${name#*Components/},${version#*>},${developer},$arm,$bit\n" | tr -d '"'>>"$au_csv"
+    #printf "$binary\n" >> "${CSV_DIR}"/log/aax_debug.log
+  done
+}
 
 #------------------------AAX Scan Function------------------------#
 function aax_scan(){
@@ -108,7 +138,7 @@ function aax_scan(){
   aax_csv="${CSV_DIR}/aax_plugins.csv"
   AAX_DIR='/Library/Application Support/Avid/Audio/Plug-Ins'
   cd "$AAX_DIR"
-
+  
   for file in $(find "$AAX_DIR" -iname "Contents" -prune); do
     name="${file%.*}"
     version=`plutil -p "/$file/Info.plist" | grep CFBundleShortVersionString | tr -d ","` 
@@ -197,18 +227,18 @@ printf "\n%.0s" {1..20}
 
 echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
 echo "*                                                         *"
-echo "*             MacOS Inventory - Version 2.3               *"
+echo "*             MacOS Inventory - Version 2.4               *"
 echo "*                                                         *"
 echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
-#echo "*                                                         *"
-#echo "*                   What does this do?                    *"
-#echo "*                                                         *"
-#echo "*   Generates a system inventory of this Mac, including:  *"
-#echo "*       - A system report                                 *"
-#echo "*       - Applications                                    *"
-#echo "*       - Pro Tools plugins                               *"
-#echo "*                                                         *"
-#echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+echo "*                                                         *"
+echo "*                   What does this do?                    *"
+echo "*                                                         *"
+echo "*   Generates a system inventory of this Mac, including:  *"
+echo "*       - A system report                                 *"
+echo "*       - Applications                                    *"
+echo "*       - Audio Plugins                                   *"
+echo "*                                                         *"
+echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
 
 
 #------------------------MacOS Inventory Menu------------------------#
@@ -217,7 +247,7 @@ printf "\n%.0s" {1..3}
 printf "Type a number and hit enter to choose an option\n\n"
 echo "1. System Profile Only"
 echo "2. System Profile & Application Inventory"
-echo "3. System Profile, Application & AAX Plugins Inventory (Audio)"
+echo "3. System Profile, Application & Audio Plugins Inventory"
 #printf "\n%.0s" {1..1}
 read -r choice
 
@@ -238,6 +268,7 @@ case "$choice" in
     printf "\nThis may take a few minutes, please wait...\n\n\n"
     CSV_Inventory
     aax_scan
+    au_scan
     apps_scan
     sort_output
     system_profile
