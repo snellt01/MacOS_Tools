@@ -295,7 +295,7 @@ function MacOS_Inventory (){
   printf "Type a number and hit enter to choose an option\n\n"
   echo "1. System Profile Only"
   echo "2. System Profile & Application Inventory"
-  echo "3. System Profile, Application & AAX Plugins Inventory"
+  echo "3. System Profile, Application & AAX Plugins Inventory (Audio)"
   #printf "\n%.0s" {1..1}
   read -r choice
 
@@ -363,14 +363,14 @@ echo "Current Hostname: $hostname"
 while true; do
   printf "\n%.0s" {1..3}
   echo "Main Menu:"
-  echo "A. Run all"
+  echo "I. Create System Inventory"
   echo "1. Set Hostname"
   echo "2. Configure Network from CSV"
   echo "3. Optimise Power Settings"
   echo "4. Enable Screen Sharing"
   echo "5. AVID Optimisations"
   echo "6. UI Tweaks"
-  echo "I. Create System Inventory"
+  echo "A. Run all"
   echo "Q. Quit"
   read choice
 
