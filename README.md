@@ -14,7 +14,11 @@ A shell script that
 	- Creates a CSV file with Pro Tools AAX details
 
 # How to Use
-Steps
+Option 1
+1. Change the script extension from '.sh' to '.command'
+2. Double click the file to run
+
+Option 2
 1.	Open ‘Terminal’
 2.	Type ‘bash’ followed by a single space into terminal and drag and drop ‘MacOS_xxxxx’ into terminal.
 3.	Hit the Enter key on your keyboard, select option 3 and hit enter again
