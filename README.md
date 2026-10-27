@@ -4,14 +4,20 @@ Bash script for deploying and documenting MacOS builds
 
 
 # What
-A shell script that
-- Optimise MacOS for Media Composer
-- Set IP addresses based on ipconfig.csv file. Name is important, IP addresses set by matching to hostname
-- Creates a Macs-at-a-Glance.csv file with commonly documented Mac details (customer documentation)
-- Can be copied and pasted directly into build document in this folder
+Two shell scripts
+
+## MacOS_Inventory
+- Creates a Macs-at-a-Glance.csv file with useful Mac details
 	- Creates a Apple System Profile
 	- Creates a CSV file with Application details
 	- Creates a CSV file with Pro Tools AAX details
+
+
+## MacOS_Tools
+As above, plus
+- Optimise MacOS for Media Composer
+- Set IP addresses based on ipconfig.csv file. Name is important, IP addresses set by matching to hostname
+
 
 # How to Use
 Option 1
